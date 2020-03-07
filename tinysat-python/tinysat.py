@@ -52,5 +52,5 @@ if __name__ == "__main__":
         print("SAT")
         print(assignment)
     
-    print(f"Time elapse: {elapsed_time * 1000 :.4f}ms")
+    print(f"Time elapse: {elapsed_time * 1000 :.2f}ms")
     

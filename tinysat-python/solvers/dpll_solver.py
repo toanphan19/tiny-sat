@@ -1,13 +1,20 @@
 import copy
 import random
 
+from enum import Enum
+
 from base.instance import Instance
 from base.helper import lit_to_var, var_to_lit
 
 
+class VarChoice(Enum):
+    IN_ORDER = 1
+    MOST_APPEARANCE = 2
+
+
 class DPLLSolver:
 
-    def __init__(self, solve_all=False):
+    def __init__(self, var_choice=VarChoice.MOST_APPEARANCE, solve_all=False):
         # TODO: Implement the algorithm to solve all possible assignment.
 
         self.instance = None
@@ -15,64 +22,10 @@ class DPLLSolver:
         self.watchlist = []
         self.unassigned_vars = []
 
+        self.var_choice = var_choice
+
         self.satisfy_assignment = None
 
-        self.node_travesed = 0
-
-
-    def dpll(self, watchlist, level):
-        """
-        level: the level of the current node. Used for backtracking.
-        """
-
-        # self.node_travesed += 1
-        # if self.node_travesed % 1000000 == 0:
-        #     print(f"Node travesed: {self.node_travesed}")
-        #     print("Current Assignment: ", self.assignment)
-
-
-        if level == self.instance.var_count:
-            self.remember_assignment()
-            # print(f"Successful assignment:\n {self.assignment}")
-
-            return True
-        
-        # Pick a variable:
-        variable = self.get_unassigned_var()
-
-        # Try assigning value to it:
-        values = self.get_assignment_values()
-        self.assign(variable, values[0])
-
-        # new_watchlist = copy.deepcopy(watchlist)
-        new_watchlist = watchlist
-        if self.propagate(new_watchlist, var_to_lit(variable, values[0])):
-            if self.dpll(new_watchlist, level + 1):
-                return True
-        
-        self.assign(variable, values[1])
-        # new_watchlist = copy.deepcopy(watchlist)
-        new_watchlist = watchlist
-        if self.propagate(new_watchlist, var_to_lit(variable, values[1])):
-            if self.dpll(new_watchlist, level + 1):
-                return True
-                
-        # Roll back to backtrack:
-        self.unassign(variable)
-        return False
-
-    def solve(self, instance):
-        self.instance = instance
-        self.unassigned_vars = copy.copy(instance.variables)
-        self.assignment = [None for _ in range(instance.var_count)]
-        watchlist = self.setup_watchlist(instance)
-        
-        result = self.dpll(watchlist, 0)
-        return result
-
-    #
-    # === Helper methods ====
-    #
 
     def setup_watchlist(self, instance):
         watchlist = [[] for x in range(2 * instance.var_count)]
@@ -112,11 +65,23 @@ class DPLLSolver:
 
         return True
 
+    def setup_branch_order(self, instance):
+        if self.var_choice == VarChoice.IN_ORDER:
+            order = copy.copy(instance.variables)
+        elif self.var_choice == VarChoice.MOST_APPEARANCE:
+            all_literals = [l for clause in instance.clauses for l in clause]
+            # Sort variables according to their decreasing number of appearances
+            order = copy.copy(instance.variables)
+            order.sort(key=lambda v: all_literals.count(var_to_lit(v, True))
+                                   + all_literals.count(var_to_lit(v, False)),
+                reverse=True                                
+            )
+            
+        return order
+
     def get_unassigned_var(self):
-        """ Randomly choose an unassigned variable """
-        var = random.choice(self.unassigned_vars)
-        # Or just choose the 1st one:
-        # var = self.unassigned_vars[0]
+        """ Choose the unassigned variable according to self.var_choice"""
+        var = self.unassigned_vars[0]
         return var
 
     def get_assignment_values(self):
@@ -134,8 +99,54 @@ class DPLLSolver:
         self.assignment[variable] = None
         self.unassigned_vars.append(variable)        
 
-    def remember_assignment(self):
+    def save_assignment(self):
         self.satisfy_assignment = copy.copy(self.assignment)
 
     def get_assignment(self):
         return self.satisfy_assignment
+
+    #
+    # ==== Main Methods ====
+    #
+    def dpll(self, watchlist, level):
+        """
+        level: the level of the current node. Used for backtracking.
+        """
+        if level == self.instance.var_count:
+            self.save_assignment()
+            # print(f"Successful assignment:\n {self.assignment}")
+
+            return True
+        
+        # Pick a variable:
+        variable = self.get_unassigned_var()
+
+        # Try assigning value to it:
+        values = self.get_assignment_values()
+
+        self.assign(variable, values[0])
+        if self.propagate(watchlist, var_to_lit(variable, values[0])):
+            if self.dpll(watchlist, level + 1):
+                return True
+        
+        self.assign(variable, values[1])
+        if self.propagate(watchlist, var_to_lit(variable, values[1])):
+            if self.dpll(watchlist, level + 1):
+                return True
+                
+        # Roll back to backtrack:
+        self.unassign(variable)
+        return False
+
+    def solve(self, instance):
+        self.instance = instance
+        self.assignment = [None for _ in range(instance.var_count)]
+        watchlist = self.setup_watchlist(instance)
+        self.unassigned_vars = self.setup_branch_order(instance)
+        
+
+
+        print(f"\nBranch order: {self.unassigned_vars}")
+
+        result = self.dpll(watchlist, 0)
+        return result
