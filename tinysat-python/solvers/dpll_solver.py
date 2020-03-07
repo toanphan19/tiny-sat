@@ -7,25 +7,26 @@ from base.instance import Instance
 from base.helper import lit_to_var, var_to_lit
 
 
-class VarChoice(Enum):
-    IN_ORDER = 1
-    MOST_APPEARANCE = 2
-
-
 class DPLLSolver:
+    """A SAT solver using DPLL algorithm. 
 
-    def __init__(self, var_choice=VarChoice.MOST_APPEARANCE, solve_all=False):
+    Parameters: \\
+    `var_choice`: {"input_order", "most_appearance"}, optional.
+        Default is "input_order".
+    `solve_all`: boolean, optional. Default is False, which means the solver \
+        will terminate after having found the first solution.
+    """
+
+    def __init__(self, var_choice="input_order", solve_all=False):        
         # TODO: Implement the algorithm to solve all possible assignment.
 
         self.instance = None
-        self.assignment = [] # True, False, or None
-        self.watchlist = []
+        self.assignment = [] # assignment[v]: {True, False, None}
+        self.watchlist = [] # watchlist[l]: the clauses watching literal l
         self.unassigned_vars = []
+        self.satisfy_assignment = [] # list of satisfying assignment found.
 
         self.var_choice = var_choice
-
-        self.satisfy_assignment = None
-
 
     def setup_watchlist(self, instance):
         watchlist = [[] for x in range(2 * instance.var_count)]
@@ -34,7 +35,7 @@ class DPLLSolver:
 
         return watchlist
 
-    def propagate(self, watchlist, false_literal):
+    def propagate(self, false_literal):
         """
         At least a literal in a clause must be true to satisfy a clause.
         When a literal is assigned false, we make all the clauses watching that
@@ -44,6 +45,7 @@ class DPLLSolver:
         Return: False if cannot update watchlist, which means the formula is
         unsatisfiable; True otherwise.
         """
+        watchlist = self.watchlist
         while len(watchlist[false_literal]) > 0:
             clause_id = watchlist[false_literal][0]
             found_another = False
@@ -66,9 +68,7 @@ class DPLLSolver:
         return True
 
     def setup_branch_order(self, instance):
-        if self.var_choice == VarChoice.IN_ORDER:
-            order = copy.copy(instance.variables)
-        elif self.var_choice == VarChoice.MOST_APPEARANCE:
+        if self.var_choice == "most_appearance":
             all_literals = [l for clause in instance.clauses for l in clause]
             # Sort variables according to their decreasing number of appearances
             order = copy.copy(instance.variables)
@@ -76,15 +76,17 @@ class DPLLSolver:
                                    + all_literals.count(var_to_lit(v, False)),
                 reverse=True                                
             )
-            
+        else:
+            order = copy.copy(instance.variables)
+
         return order
 
-    def get_unassigned_var(self):
+    def pick_branching_var(self):
         """ Choose the unassigned variable according to self.var_choice"""
         var = self.unassigned_vars[0]
         return var
 
-    def get_assignment_values(self):
+    def pick_assignment_order(self):
         """ Randomly choose the order of value to make an assignment """
         if random.random() >= 0.5:
             return (True, False)
@@ -100,17 +102,19 @@ class DPLLSolver:
         self.unassigned_vars.append(variable)        
 
     def save_assignment(self):
-        self.satisfy_assignment = copy.copy(self.assignment)
+        self.satisfy_assignment.append(copy.copy(self.assignment))
 
-    def get_assignment(self):
+    def get_assignments(self):
+        """ Return the list of satisfying assignments.
+        """
         return self.satisfy_assignment
 
     #
     # ==== Main Methods ====
     #
-    def dpll(self, watchlist, level):
+    def dpll(self, level):
         """
-        level: the level of the current node. Used for backtracking.
+        `level`: the current decision level. Used for backtracking.
         """
         if level == self.instance.var_count:
             self.save_assignment()
@@ -118,20 +122,18 @@ class DPLLSolver:
 
             return True
         
-        # Pick a variable:
-        variable = self.get_unassigned_var()
-
-        # Try assigning value to it:
-        values = self.get_assignment_values()
+        # Pick a variable & try assigning value to it:
+        variable = self.pick_branching_var()
+        values = self.pick_assignment_order()
 
         self.assign(variable, values[0])
-        if self.propagate(watchlist, var_to_lit(variable, values[0])):
-            if self.dpll(watchlist, level + 1):
+        if self.propagate(var_to_lit(variable, values[0])):
+            if self.dpll(level + 1):
                 return True
         
         self.assign(variable, values[1])
-        if self.propagate(watchlist, var_to_lit(variable, values[1])):
-            if self.dpll(watchlist, level + 1):
+        if self.propagate(var_to_lit(variable, values[1])):
+            if self.dpll(level + 1):
                 return True
                 
         # Roll back to backtrack:
@@ -141,12 +143,10 @@ class DPLLSolver:
     def solve(self, instance):
         self.instance = instance
         self.assignment = [None for _ in range(instance.var_count)]
-        watchlist = self.setup_watchlist(instance)
+        self.watchlist = self.setup_watchlist(instance)
         self.unassigned_vars = self.setup_branch_order(instance)
         
+        print(f"\nBranch order: {[x+1 for x in self.unassigned_vars]}")
 
-
-        print(f"\nBranch order: {self.unassigned_vars}")
-
-        result = self.dpll(watchlist, 0)
-        return result
+        self.dpll(0)
+        return len(self.get_assignments()) > 0
