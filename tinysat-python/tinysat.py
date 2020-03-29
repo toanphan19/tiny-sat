@@ -3,19 +3,18 @@ import time
 
 from enum import Enum
 
-import base.parser as parser
+import base.dimacs_parser as parser
 from base.instance import Instance
 from solvers.dpll_solver import DPLLSolver
 
 
 class Satisfiability(Enum):
-    SAT = 'SAT'
-    UNSAT = 'UNSAT'
-    UNKNOWN = 'UNKNOWN'
+    SAT = 'SATISFIABLE'
+    UNSAT = 'UNSATISFIABLE'
+    # UNKNOWN = 'UNKNOWN'
 
 
 def run_solver(program):
-    # program = input_file.read()
     instance = parser.parse_program(program)
     solver = DPLLSolver("input_order")
     is_sat = solver.solve(instance)
@@ -31,7 +30,7 @@ def run_solver(program):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("There are not enough arguments!")
-        print("Expected: ./tinysat.py <input file>")
+        print("Expected: python tinysat.py <input file>")
         sys.exit()
 
     with open(sys.argv[1], 'r') as f:
