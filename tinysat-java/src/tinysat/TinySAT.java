@@ -15,11 +15,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
-public class Main {
+public class TinySAT {
 
     public static void main(String[] args) {
-//        String filename = "../benchmark/aim/aim-50-1_6-yes1-1.cnf";
-        String filename = "../examples/simple2.dimacs";
+        if (args.length < 1) {
+            System.out.println("Missing arguments. Expected: java -jar TinySAT.jar <inputfile>");
+            return;
+        }
+        String filename = args[0];
+//        String filename = "../examples/simple2.dimacs";
 
         String program;
         try {

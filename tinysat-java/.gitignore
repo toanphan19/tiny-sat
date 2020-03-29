@@ -1,5 +1,6 @@
 # Output folder
 out/
+src/META-INF/
 
 # Intellij IDEA project folder:
 .idea/
