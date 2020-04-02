@@ -10,6 +10,14 @@ A SAT solver is a mathematical solver created to find solutions for Boolean Sati
 ### Input format
 The input format is DIMACS CNF, which is standard for SAT solvers. A brief description can be found [here](https://logic.pdmi.ras.ru/~basolver/dimacs.html).
 
+Example:
+```
+c A sample input file.
+p cnf 3 2
+1 -3 0
+2 3 -1 0 
+```
+
 ### Example usage
 ```
 python tinysat.py ../examples/simple.dimacs
