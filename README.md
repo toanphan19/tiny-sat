@@ -5,6 +5,10 @@ A basic SAT solver using [DPLL](https://en.wikipedia.org/wiki/DPLL_algorithm) al
 ### What is a SAT Solver?
 A SAT solver is a mathematical solver created to find solutions for Boolean Satisfiability Problems, which is NP-complete. More info can be found on the [wikipedia's page](https://en.wikipedia.org/wiki/Boolean_satisfiability_problem).
 
+### What are SAT Solvers used for?
+Any NP-hard problems can be formulated as SAT formular and be solved by SAT Solvers. 
+Some areas where they have been performing well are:
+- **Packagem management system**. Conda, a package manager for Python, explains in [this article](https://www.anaconda.com/understanding-and-improving-condas-performance/) that they have been using [picosat](http://fmv.jku.at/picosat/) in their implementation and is experimenting with other SAT solvers. [Fedora's DNF](https://fedoraproject.org/wiki/Features/DNF) is also solving the dependency resolution problem using SAT Solvers.
 
 ## Usage
 ### Input format
